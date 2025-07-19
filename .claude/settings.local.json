@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(adb shell am start:*)"
+    ],
+    "deny": []
+  }
+}

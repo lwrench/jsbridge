@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSBridge Test Page</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        .test-section h3 {
+            margin: 0 0 15px 0;
+            color: #666;
+        }
+        button {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056CC;
+        }
+        button:active {
+            background: #004299;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #e8f4fd;
+            border-radius: 5px;
+            border-left: 3px solid #007AFF;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .error {
+            background: #ffe8e8;
+            border-left-color: #ff4444;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>JSBridge 测试页面</h1>
+        
+        <div class="test-section">
+            <h3>🔗 连接测试</h3>
+            <button onclick="testPing()">Ping Test</button>
+            <div id="ping-result" class="result" style="display:none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📱 设备信息</h3>
+            <button onclick="getDeviceInfo()">获取设备信息</button>
+            <button onclick="getSystemInfo()">获取系统信息</button>
+            <button onclick="getAppInfo()">获取应用信息</button>
+            <div id="device-result" class="result" style="display:none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🎨 UI 交互</h3>
+            <input type="text" id="toast-input" placeholder="输入 Toast 消息" value="Hello from WebView!">
+            <br>
+            <button onclick="showToast()">显示 Toast</button>
+            <button onclick="vibrate()">震动</button>
+            <div id="ui-result" class="result" style="display:none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📊 性能测试</h3>
+            <button onclick="performanceTest()">连续调用测试</button>
+            <div id="performance-result" class="result" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // JSBridge JavaScript 端实现
+        window.JSBridge = {
+            callbackId: 0,
+            callbacks: {},
+            
+            // 生成回调ID
+            generateCallbackId: function() {
+                return 'js_callback_' + (++this.callbackId);
+            },
+            
+            // 调用 Native 方法
+            call: function(method, params, callback) {
+                if (!window.AndroidBridge) {
+                    console.error('AndroidBridge not available');
+                    if (callback) callback({ success: false, error: 'AndroidBridge not available' });
+                    return;
+                }
+                
+                const callbackId = this.generateCallbackId();
+                const paramsJson = JSON.stringify(params || {});
+                
+                if (callback) {
+                    this.callbacks[callbackId] = callback;
+                    
+                    // 设置超时
+                    setTimeout(() => {
+                        if (this.callbacks[callbackId]) {
+                            delete this.callbacks[callbackId];
+                            callback({ success: false, error: 'Callback timeout' });
+                        }
+                    }, 30000);
+                }
+                
+                try {
+                    window.AndroidBridge.call(method, paramsJson, callbackId);
+                } catch (e) {
+                    console.error('Failed to call AndroidBridge:', e);
+                    if (callback) callback({ success: false, error: e.message });
+                }
+            },
+            
+            // 同步调用
+            callSync: function(method, params) {
+                if (!window.AndroidBridge) {
+                    return { success: false, error: 'AndroidBridge not available' };
+                }
+                
+                try {
+                    const paramsJson = JSON.stringify(params || {});
+                    const result = window.AndroidBridge.callSync(method, paramsJson);
+                    return JSON.parse(result);
+                } catch (e) {
+                    return { success: false, error: e.message };
+                }
+            },
+            
+            // 处理回调
+            _handleCallback: function(responseJson) {
+                try {
+                    const response = JSON.parse(responseJson);
+                    const callback = this.callbacks[response.id];
+                    if (callback) {
+                        delete this.callbacks[response.id];
+                        callback(response);
+                    }
+                } catch (e) {
+                    console.error('Failed to handle callback:', e);
+                }
+            },
+            
+            // 处理事件
+            _handleEvent: function(eventDataJson) {
+                try {
+                    const eventData = JSON.parse(eventDataJson);
+                    console.log('Received event:', eventData);
+                    // 这里可以添加事件处理逻辑
+                } catch (e) {
+                    console.error('Failed to handle event:', e);
+                }
+            }
+        };
+        
+        // 测试函数
+        function testPing() {
+            const resultDiv = document.getElementById('ping-result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Testing...';
+            resultDiv.className = 'result';
+            
+            const startTime = Date.now();
+            JSBridge.call('ping', {}, function(result) {
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                
+                if (result.success) {
+                    resultDiv.textContent = `✅ Ping successful! Response: ${result.data}, Duration: ${duration}ms`;
+                } else {
+                    resultDiv.textContent = `❌ Ping failed: ${result.error}`;
+                    resultDiv.className = 'result error';
+                }
+            });
+        }
+        
+        function getDeviceInfo() {
+            const resultDiv = document.getElementById('device-result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Getting device info...';
+            resultDiv.className = 'result';
+            
+            JSBridge.call('getDeviceInfo', {}, function(result) {
+                if (result.success) {
+                    resultDiv.textContent = '📱 Device Info:\n' + JSON.stringify(result.data, null, 2);
+                } else {
+                    resultDiv.textContent = `❌ Failed: ${result.error}`;
+                    resultDiv.className = 'result error';
+                }
+            });
+        }
+        
+        function getSystemInfo() {
+            const resultDiv = document.getElementById('device-result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Getting system info...';
+            resultDiv.className = 'result';
+            
+            JSBridge.call('getSystemInfo', {}, function(result) {
+                if (result.success) {
+                    resultDiv.textContent = '⚙️ System Info:\n' + JSON.stringify(result.data, null, 2);
+                } else {
+                    resultDiv.textContent = `❌ Failed: ${result.error}`;
+                    resultDiv.className = 'result error';
+                }
+            });
+        }
+        
+        function getAppInfo() {
+            const resultDiv = document.getElementById('device-result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Getting app info...';
+            resultDiv.className = 'result';
+            
+            JSBridge.call('getAppInfo', {}, function(result) {
+                if (result.success) {
+                    resultDiv.textContent = '📦 App Info:\n' + JSON.stringify(result.data, null, 2);
+                } else {
+                    resultDiv.textContent = `❌ Failed: ${result.error}`;
+                    resultDiv.className = 'result error';
+                }
+            });
+        }
+        
+        function showToast() {
+            const resultDiv = document.getElementById('ui-result');
+            const message = document.getElementById('toast-input').value;
+            
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Showing toast...';
+            resultDiv.className = 'result';
+            
+            JSBridge.call('showToast', { message: message, long: false }, function(result) {
+                if (result.success) {
+                    resultDiv.textContent = '✅ Toast shown successfully';
+                } else {
+                    resultDiv.textContent = `❌ Failed: ${result.error}`;
+                    resultDiv.className = 'result error';
+                }
+            });
+        }
+        
+        function vibrate() {
+            const resultDiv = document.getElementById('ui-result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Vibrating...';
+            resultDiv.className = 'result';
+            
+            JSBridge.call('vibrate', { duration: 200 }, function(result) {
+                if (result.success) {
+                    resultDiv.textContent = '✅ Vibration completed';
+                } else {
+                    resultDiv.textContent = `❌ Failed: ${result.error}`;
+                    resultDiv.className = 'result error';
+                }
+            });
+        }
+        
+        function performanceTest() {
+            const resultDiv = document.getElementById('performance-result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Running performance test...';
+            resultDiv.className = 'result';
+            
+            const testCount = 10;
+            let completedCount = 0;
+            const startTime = Date.now();
+            const results = [];
+            
+            for (let i = 0; i < testCount; i++) {
+                const callStartTime = Date.now();
+                JSBridge.call('ping', {}, function(result) {
+                    const callEndTime = Date.now();
+                    const duration = callEndTime - callStartTime;
+                    results.push(duration);
+                    completedCount++;
+                    
+                    if (completedCount === testCount) {
+                        const totalTime = Date.now() - startTime;
+                        const avgTime = results.reduce((a, b) => a + b, 0) / results.length;
+                        const minTime = Math.min(...results);
+                        const maxTime = Math.max(...results);
+                        
+                        resultDiv.textContent = `🚀 Performance Test Results:\n` +
+                            `Total calls: ${testCount}\n` +
+                            `Total time: ${totalTime}ms\n` +
+                            `Average time: ${avgTime.toFixed(2)}ms\n` +
+                            `Min time: ${minTime}ms\n` +
+                            `Max time: ${maxTime}ms\n` +
+                            `Success rate: ${(results.length / testCount * 100).toFixed(2)}%`;
+                    }
+                });
+            }
+        }
+        
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('JSBridge Test Page Loaded');
+            
+            // 检查 AndroidBridge 是否可用
+            if (window.AndroidBridge) {
+                console.log('✅ AndroidBridge is available');
+            } else {
+                console.log('❌ AndroidBridge is not available');
+            }
+        });
+    </script>
+</body>
+</html>
