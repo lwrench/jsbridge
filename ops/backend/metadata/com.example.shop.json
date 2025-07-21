@@ -1,0 +1,20 @@
+{
+  "latestVersion": "2.0.1",
+  "versions": {
+    "2.0.1": {
+      "versionCode": 201,
+      "size": 3145728,
+      "checksum": "ghi789jkl123mno",
+      "publishTime": "2025-01-20T14:00:00Z",
+      "status": "active",
+      "description": "电商应用最新版",
+      "downloadCount": 2800,
+      "forceUpdate": true,
+      "releaseNotes": "重大安全更新",
+      "features": ["新增支付功能", "商品搜索优化"],
+      "bugFixes": ["修复支付安全漏洞", "修复商品展示问题"],
+      "minAppVersion": "1.5.0",
+      "maxAppVersion": "3.0.0"
+    }
+  }
+}

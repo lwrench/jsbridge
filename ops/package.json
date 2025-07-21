@@ -1,0 +1,21 @@
+{
+  "name": "offline-package-management",
+  "version": "1.0.0",
+  "description": "Offline package management platform",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel run dev",
+    "build": "pnpm --recursive run build",
+    "start": "pnpm --recursive run start",
+    "test": "pnpm --recursive run test",
+    "lint": "pnpm --recursive run lint",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "packageManager": "pnpm@8.0.0"
+}

@@ -1,0 +1,19 @@
+{
+  "packageId": "com.example.webapp",
+  "version": "1.4.0",
+  "versionCode": 140,
+  "minAppVersion": "1.0.0",
+  "updateTime": "2025-01-21T15:48:00Z",
+  "size": 256,
+  "checksum": "test123456789",
+  "files": {
+    "index.html": {
+      "path": "index.html",
+      "size": 58,
+      "checksum": "html123"
+    }
+  },
+  "routes": {
+    "/": "index.html"
+  }
+}

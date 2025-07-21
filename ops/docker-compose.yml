@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - API_SECRET=${API_SECRET:-default-secret-key}
+      - CDN_BASE_URL=${CDN_BASE_URL:-http://localhost:3001}
+    volumes:
+      - ./data/packages:/app/packages
+      - ./data/metadata:/app/metadata
+      - ./data/analytics:/app/analytics
+      - ./data/uploads:/app/uploads
+    networks:
+      - offline-platform
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - offline-platform
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./data/packages:/usr/share/nginx/packages
+      - ./data/ssl:/etc/nginx/ssl
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - offline-platform
+    restart: unless-stopped
+
+networks:
+  offline-platform:
+    driver: bridge
+
+volumes:
+  package_data:
+    driver: local
+  metadata_data:
+    driver: local
+  analytics_data:
+    driver: local

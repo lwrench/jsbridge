@@ -5,7 +5,14 @@
       "Bash(./gradlew:*)",
       "Bash(adb shell:*)",
       "Bash(adb pull:*)",
-      "Bash(adb logcat:*)"
+      "Bash(adb logcat:*)",
+      "Bash(mkdir:*)",
+      "Bash(ls:*)",
+      "Bash(pnpm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm start)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }
