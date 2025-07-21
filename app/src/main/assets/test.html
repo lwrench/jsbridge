@@ -104,6 +104,14 @@
         </div>
         
         <div class="test-section">
+            <h3>📦 离线包管理</h3>
+            <button onclick="checkOfflineStatus()">检查离线状态</button>
+            <button onclick="checkOfflineUpdate()">检查更新</button>
+            <button onclick="downloadOfflineUpdate()">下载更新</button>
+            <div id="offline-result" class="result" style="display:none;"></div>
+        </div>
+        
+        <div class="test-section">
             <h3>📊 性能测试</h3>
             <button onclick="performanceTest()">连续调用测试</button>
             <div id="performance-result" class="result" style="display:none;"></div>
@@ -289,6 +297,67 @@
             JSBridge.call('vibrate', { duration: 200 }, function(result) {
                 if (result.success) {
                     resultDiv.textContent = '✅ Vibration completed';
+                } else {
+                    resultDiv.textContent = `❌ Failed: ${result.error}`;
+                    resultDiv.className = 'result error';
+                }
+            });
+        }
+        
+        function checkOfflineStatus() {
+            const resultDiv = document.getElementById('offline-result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Checking offline status...';
+            resultDiv.className = 'result';
+            
+            JSBridge.call('getOfflinePackageStatus', {}, function(result) {
+                if (result.success) {
+                    const status = result.data;
+                    resultDiv.textContent = `📦 Offline Package Status:
+Mode: ${status.isOfflineMode ? 'Online' : 'Offline'}
+Version: ${status.version}
+Last Update: ${new Date(status.lastUpdate).toLocaleString()}`;
+                } else {
+                    resultDiv.textContent = `❌ Failed: ${result.error}`;
+                    resultDiv.className = 'result error';
+                }
+            });
+        }
+        
+        function checkOfflineUpdate() {
+            const resultDiv = document.getElementById('offline-result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Checking for offline updates...';
+            resultDiv.className = 'result';
+            
+            JSBridge.call('checkOfflineUpdate', {}, function(result) {
+                if (result.success) {
+                    const updateInfo = result.data;
+                    if (updateInfo.hasUpdate) {
+                        resultDiv.textContent = `🎉 Update Available!
+Current: ${updateInfo.currentVersion}
+Latest: ${updateInfo.latestVersion}
+Size: ${(updateInfo.size / 1024 / 1024).toFixed(2)} MB
+Description: ${updateInfo.description}`;
+                    } else {
+                        resultDiv.textContent = `✅ ${updateInfo.message || 'No updates available'}`;
+                    }
+                } else {
+                    resultDiv.textContent = `❌ Failed: ${result.error}`;
+                    resultDiv.className = 'result error';
+                }
+            });
+        }
+        
+        function downloadOfflineUpdate() {
+            const resultDiv = document.getElementById('offline-result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Starting offline update download...';
+            resultDiv.className = 'result';
+            
+            JSBridge.call('downloadOfflineUpdate', {}, function(result) {
+                if (result.success) {
+                    resultDiv.textContent = `✅ ${result.data}`;
                 } else {
                     resultDiv.textContent = `❌ Failed: ${result.error}`;
                     resultDiv.className = 'result error';
